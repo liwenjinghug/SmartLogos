@@ -16,35 +16,6 @@ Navicat Premium 17.0.4
 文件处理: Apache PDFBox、Apache POI
 构建工具: Maven
 Java版本: 17
-项目结构
-text
-src/main/java/com/smartlogos/note/
-├── config/                 # 配置类
-│   └── SecurityConfig.java
-├── controller/            # REST控制器
-│   ├── DocumentController.java
-│   └── NoteController.java
-├── entity/                # JPA实体类
-│   ├── User.java
-│   ├── Document.java
-│   ├── Note.java
-│   └── Question.java
-├── repository/            # 数据访问层
-│   ├── UserRepository.java
-│   ├── DocumentRepository.java
-│   ├── NoteRepository.java
-│   └── QuestionRepository.java
-├── service/               # 业务逻辑层
-│   ├── DocumentService.java
-│   ├── AIService.java
-│   ├── FileStorageService.java
-│   ├── TextExtractionService.java
-│   ├── NoteService.java
-│   └── QuestionService.java
-└── dto/                   # 数据传输对象
-    ├── FileUploadResponse.java
-    ├── AIProcessRequest.java
-    └── AIProcessResponse.java
 🗄️ 数据库设计
 数据库表结构
 1. users - 用户表
