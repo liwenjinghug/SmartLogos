@@ -1,89 +1,117 @@
-// service/AIService.java
+
+// src/main/java/com/smartlogos/note/service/AIService.java
 package com.smartlogos.note.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.smartlogos.note.dto.AIProcessRequest;
 import com.smartlogos.note.dto.AIProcessResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
+/**
+ * 封装调用 AI 核心模块的逻辑
+ */
 @Service
 @Slf4j
 public class AIService {
 
-    @Value("${ai.api.url:http://localhost:5000/api/process}")
+    @Value("${ai.api.url}")
     private String aiApiUrl;
 
-    @Value("${ai.api.key:}")
-    private String aiApiKey;
+    @Value("${ai.api.chat-url}")
+    private String aiChatUrl;
 
-    private final RestTemplate restTemplate;
+    @Value("${ai.api.key:}")
+    private String apiKey;
+
+    private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper;
 
-    public AIService() {
-        this.restTemplate = new RestTemplate();
-        this.objectMapper = new ObjectMapper();
+    public AIService(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
     }
 
-    public AIProcessResponse processContent(String content, String fileName) {
+    /**
+     * 调用 AI 接口，对纯文本做摘要 + 思维导图 + 出题 + 打标签
+     *
+     * @param content    提取后的全文纯文本
+     * @param targetLang "zh" / "en"
+     */
+    public AIProcessResponse processDocument(String content, String targetLang) {
         try {
-            AIProcessRequest request = new AIProcessRequest();
-            request.setContent(content);
-            request.setFileName(fileName);
-            request.setContentType("text");
+            // 请求体
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("content", content);
+            payload.put("target_lang", targetLang);
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            if (aiApiKey != null && !aiApiKey.isEmpty()) {
-                headers.set("Authorization", "Bearer " + aiApiKey);
+            if (apiKey != null && !apiKey.isBlank()) {
+                headers.set("Authorization", "Bearer " + apiKey);
             }
 
-            HttpEntity<AIProcessRequest> httpEntity = new HttpEntity<>(request, headers);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
 
-            log.info("调用AI接口处理内容，长度: {}", content.length());
-            ResponseEntity<AIProcessResponse> response = restTemplate.postForEntity(
-                    aiApiUrl, httpEntity, AIProcessResponse.class);
+            log.info("调用 AI 接口: {} 目标语言: {}", aiApiUrl, targetLang);
+            ResponseEntity<String> responseEntity =
+                    restTemplate.postForEntity(aiApiUrl, entity, String.class);
+
+            if (!responseEntity.getStatusCode().is2xxSuccessful() || responseEntity.getBody() == null) {
+                log.error("AI 接口返回非 2xx：status={}, body={}",
+                        responseEntity.getStatusCode(), responseEntity.getBody());
+                throw new RuntimeException("AI 接口调用失败，HTTP 状态码：" + responseEntity.getStatusCode());
+            }
+
+            String body = responseEntity.getBody();
+            log.debug("AI 接口返回原始 JSON: {}", body);
+
+            // 反序列化为 AIProcessResponse
+            return objectMapper.readValue(body, AIProcessResponse.class);
+        } catch (Exception e) {
+            log.error("调用 AI 接口异常", e);
+            throw new RuntimeException("调用 AI 接口异常: " + e.getMessage(), e);
+        }
+    }
+    /**
+     * 智能问答接口（用于 /api/chat）
+     */
+    public String chat(String context, String question, String lang) {
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("context", context);
+            payload.put("question", question);
+            payload.put("target_lang", lang);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            if (apiKey != null && !apiKey.isBlank()) {
+                headers.set("Authorization", "Bearer " + apiKey);
+            }
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
+
+            log.info("调用 AI 聊天接口: {}", aiChatUrl);
+            ResponseEntity<String> response = restTemplate.postForEntity(
+                    aiChatUrl,
+                    entity,
+                    String.class
+            );
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                log.info("AI处理成功，生成摘要长度: {}", response.getBody().getSummary().length());
-                return response.getBody();
+                return objectMapper.readTree(response.getBody()).get("answer").asText();
+            } else {
+                log.error("AI 聊天接口返回非 2xx：status={}", response.getStatusCode());
+                return "抱歉，我暂时无法回答，请稍后再试。";
             }
         } catch (Exception e) {
-            log.error("调用AI接口失败", e);
-            return createMockResponse(content);
+            log.error("调用 AI /chat 异常", e);
+            return "抱歉，我暂时无法回答，请稍后再试。";
         }
-
-        return createMockResponse(content);
     }
 
-    private AIProcessResponse createMockResponse(String content) {
-        AIProcessResponse response = new AIProcessResponse();
-        response.setSummary("这是AI生成的摘要：" + content.substring(0, Math.min(100, content.length())) + "...");
-        response.setMindMapJson("{\"name\":\"根节点\",\"children\":[{\"name\":\"子节点1\"},{\"name\":\"子节点2\"}]}");
-        response.setTags(Arrays.asList("#测试", "#AI生成"));
-
-        AIProcessResponse.QuestionDTO question1 = new AIProcessResponse.QuestionDTO();
-        question1.setQuestionText("这是一个测试选择题？");
-        question1.setQuestionType("MULTIPLE_CHOICE");
-        question1.setAnswer("A");
-        question1.setOptions(Arrays.asList("选项A", "选项B", "选项C", "选项D"));
-
-        AIProcessResponse.QuestionDTO question2 = new AIProcessResponse.QuestionDTO();
-        question2.setQuestionText("这是一个测试简答题？");
-        question2.setQuestionType("SHORT_ANSWER");
-        question2.setAnswer("这是简答题的参考答案");
-
-        response.setQuestions(Arrays.asList(question1, question2));
-
-        return response;
-    }
 }
