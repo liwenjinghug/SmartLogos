@@ -1,176 +1,70 @@
-智学链 (SmartLogos) - 前端系统文档
+# Getting Started with Create React App
 
-📖 项目概述
+This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
-智学链 (SmartLogos) 前端系统是一个基于 **React** 的单页应用，为用户提供与后端 AI 知识聚合系统的交互界面。
+## Available Scripts
 
-通过直观的 UI 设计，用户可以轻松上传多模态文件、查看 AI 生成的学习笔记、思维导图和智能问题，实现高效的知识管理与学习辅助。
+In the project directory, you can run:
 
-* * *
+### `npm start`
 
-🎯 核心功能
+Runs the app in the development mode.\
+Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 
-* **文件上传中心:** 支持 PDF、Word、PPT、TXT 等多格式文件上传，实时显示上传进度。
-  
-* **文档管理界面:** 展示用户上传的所有文档及处理状态，支持状态筛选。
-  
-* **AI 笔记详情:** 展示 AI 生成的文档摘要、标签、思维导图和智能问题。
-  
-* **响应式设计:** 适配桌面端与移动端，提供一致的用户体验。
-  
-* **多语言支持:** 根据用户选择展示中文 / 英文的 AI 处理结果。
-  
+The page will reload when you make changes.\
+You may also see any lint errors in the console.
 
-* * *
+### `npm test`
 
-🏗️ 技术栈
+Launches the test runner in the interactive watch mode.\
+See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
 
-| **类别** | **技术名称** | **版本** |
-| --- | --- | --- |
-| **核心框架** | React | 19.2.1 |
-| **UI 组件库** | Ant Design | 6.0.1 |
-| **路由管理** | React Router | 7.10.0 |
-| **HTTP 客户端** | Axios | -   |
-| **构建工具** | Create React App | -   |
-| **样式解决方案** | CSS + Ant Design 内置样式 | -   |
-| **Markdown 渲染** | React Markdown | -   |
-| **测试工具** | Jest + React Testing Library | -   |
+### `npm run build`
 
-* * *
+Builds the app for production to the `build` folder.\
+It correctly bundles React in production mode and optimizes the build for the best performance.
 
-🔌 API 交互
+The build is minified and the filenames include the hashes.\
+Your app is ready to be deployed!
 
-前端与后端通过 **RESTful API** 进行数据交互，主要接口包括：
+See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
 
-### 文件上传与 AI 分析
+### `npm run eject`
 
-* `POST /api/analyze`
-  
-  * **功能:** 上传文件并触发 AI 分析。
-    
-  * **备注:** 支持进度监听和状态反馈。
-    
+**Note: this is a one-way operation. Once you `eject`, you can't go back!**
 
-### 文档管理
+If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
 
-* `GET /api/documents/user/{userId}`
-  
-  * **功能:** 获取用户文档列表。
-* `GET /api/documents/{documentId}/questions`
-  
-  * **功能:** 获取文档相关问题。
+Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
 
-### 笔记管理
+You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
 
-* `GET /api/notes/document/{documentId}`
-  
-  * **功能:** 获取文档对应的笔记。
-* `GET /api/notes/{noteId}/mindmap`
-  
-  * **功能:** 获取思维导图数据。
+## Learn More
 
-* * *
+You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
 
-🚀 快速开始
+To learn React, check out the [React documentation](https://reactjs.org/).
 
-### 环境要求
+### Code Splitting
 
-* Node.js **14.x+**
-  
-* npm **6.x+** 或 yarn **1.x+**
-  
+This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
 
-* * *
+### Analyzing the Bundle Size
 
-📱 功能使用说明
+This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
 
-### 1. 文档上传
+### Making a Progressive Web App
 
-1. 在首页选择**目标语言**（中文 / 英文）。
-  
-2. 点击 **"上传文件"** 按钮选择 PDF/Word/PPT/TXT 文件。
-  
-3. 等待文件上传和 AI 处理（进度条实时显示状态）。
-  
-4. 处理完成后自动刷新文档列表。
-  
+This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
 
-### 2. 文档管理
+### Advanced Configuration
 
-首页展示所有上传的文档，包括文件名、类型、大小、上传时间和处理状态。
+This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
 
-| **文档状态** | **说明** |
-| --- | --- |
-| **待分析** | 文件已上传，等待 AI 处理。 |
-| **AI 分析中** | AI 正在处理文档。 |
-| **分析完成** | 可点击 **"查看笔记"** 进入详情页。 |
-| **分析失败** | 显示错误状态。 |
+### Deployment
 
-### 3. 笔记详情
+This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
 
-分析完成的文档可查看：
+### `npm run build` fails to minify
 
-* **AI 摘要:** 文档核心内容提炼。
-  
-* **文档标签:** AI 自动生成的关键词标签。
-  
-* **思维导图:** 以 Markdown 格式展示的知识结构。
-  
-* **智能问题:** AI 生成的测试题，包含选项、答案和解析。
-  
-
-* * *
-
-🧪 测试用户
-
-前端默认使用测试用户 ID **（1）** 访问系统，对应后端测试用户：
-
-* **用户名:** 张三
-  
-* **密码:** `password123`
-  
-
-* * *
-
-🐛 常见问题
-
-### 1. 文件上传失败
-
-* 检查文件格式是否为支持的类型（PDF/Word/PPT/TXT）。
-  
-* 确认文件大小不超过 **10MB**。
-  
-* 检查网络连接和后端服务是否正常。
-  
-
-### 2. AI 处理超时
-
-* 大型文件可能需要更长处理时间。
-  
-* 可手动刷新页面查看最新状态。
-  
-
-### 3. 页面显示异常
-
-* 尝试清除浏览器缓存。
-  
-* 确认依赖包已正确安装。
-  
-* 检查控制台错误信息。
-  
-
-* * *
-
-📝 版本历史
-
-### v1.0.0 (2025-11-27)
-
-* ✅ 基础文件上传功能
-  
-* ✅ 文档列表展示与状态管理
-  
-* ✅ AI 笔记详情页（摘要、标签、思维导图、问题）
-  
-* ✅ 多语言支持
-  
-* ✅ 响应式布局适配
+This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
