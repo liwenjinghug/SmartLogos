@@ -1,81 +1,205 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { Card, Typography, Tag, Divider, List } from 'antd';
+import { Card, Typography, Tag, Divider, List, Button, message } from 'antd';
 import ReactMarkdown from 'react-markdown';
-import { getNoteByDocumentId } from '../api';
-import LoadingSpinner from '../components/LoadingSpinner';
+import rehypeSanitize from 'rehype-sanitize';
+import { getNoteDetail, chatWithNote, saveQuizzesToDB } from '../api/index';
 
-const { Title, Paragraph } = Typography;
+const { Title, Text, Paragraph, TextArea } = Typography;
 
-const NoteDetail = () => {
-  const { documentId } = useParams();
-  const [note, setNote] = useState(null);
+const NoteDetail = ({ match }) => {
+  const noteId = match.params.id;
+  const [noteData, setNoteData] = useState({
+    filename: '',
+    summary: '',
+    mindMap: '',
+    quizzes: [],
+    tags: []
+  });
   const [loading, setLoading] = useState(true);
+  const [chatHistory, setChatHistory] = useState([]);
+  const [userQuestion, setUserQuestion] = useState('');
+  const [quizzesSaved, setQuizzesSaved] = useState(false); // 题目是否已存储
 
-  // 模拟数据（先避免接口报错，后续替换真实接口）
+  // 获取笔记详情 + 自动存储题目
   useEffect(() => {
-    setTimeout(() => {
-      setNote({
-        summary: '这是测试文档的摘要内容',
-        mind_map_content: '# 思维导图\n- 第一章：基础概念\n  - 1.1 核心定义\n  - 1.2 应用场景\n- 第二章：实践操作',
-        tags: ['人工智能', '学习笔记', '多模态'],
-        questions: [
-          {
-            question: 'OSI参考模型共有多少层？',
-            options: '["5层", "6层", "7层", "8层"]',
-            answer: '7层',
-            explanation: 'OSI参考模型分为物理层、数据链路层、网络层、传输层、会话层、表示层、应用层，共7层'
-          }
-        ]
-      });
-      setLoading(false);
-    }, 1000);
-  }, [documentId]);
+    const fetchNoteData = async () => {
+      try {
+        setLoading(true);
+        const res = await getNoteDetail(noteId);
+        const { filename, summary, mind_map, quizzes, tags } = res.data;
+        const noteInfo = {
+          filename: filename || '',
+          summary: summary || '',
+          mindMap: mind_map || '',
+          quizzes: quizzes || [],
+          tags: tags || []
+        };
+        setNoteData(noteInfo);
+        
+        // 自动存储题目到后端
+        if (quizzes && quizzes.length > 0 && !quizzesSaved) {
+          await saveQuizzesToDB(noteId, quizzes);
+          setQuizzesSaved(true);
+          message.success('题目已成功存入数据库！');
+        }
+      } catch (err) {
+        message.error('笔记加载失败：' + err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  if (loading) return <LoadingSpinner loading={loading} />;
-  if (!note) return <div>笔记不存在</div>;
+    if (noteId) {
+      fetchNoteData();
+    }
+  }, [noteId, quizzesSaved]);
+
+  // Chat with Note 逻辑
+  const handleSendQuestion = async () => {
+    if (!userQuestion.trim() || !noteData.summary) {
+      message.warning('请输入有效问题');
+      return;
+    }
+    try {
+      const res = await chatWithNote(userQuestion.trim(), noteData.summary);
+      setChatHistory([
+        ...chatHistory,
+        { role: 'user', content: userQuestion.trim() },
+        { role: 'ai', content: res.data.answer || '暂无回答' }
+      ]);
+      setUserQuestion('');
+    } catch (err) {
+      message.error('聊天请求失败：' + err.message);
+    }
+  };
+
+  // 手动存储题目（备用）
+  const handleSaveQuizzes = async () => {
+    if (noteData.quizzes.length === 0) {
+      message.warning('暂无题目可存储');
+      return;
+    }
+    try {
+      await saveQuizzesToDB(noteId, noteData.quizzes);
+      setQuizzesSaved(true);
+      message.success('题目已存入数据库！');
+    } catch (err) {
+      message.error('存储失败：' + err.message);
+    }
+  };
+
+  // 渲染题目列表
+  const renderQuizzes = () => {
+    if (!noteData.quizzes || noteData.quizzes.length === 0) {
+      return <Text>暂无题目</Text>;
+    }
+    return (
+      <List
+        dataSource={noteData.quizzes}
+        renderItem={(quiz, index) => (
+          <List.Item key={index} style={{ margin: '10px 0', padding: '10px', border: '1px solid #e8e8e8', borderRadius: '4px' }}>
+            <div>
+              <Paragraph strong>
+                第{index + 1}题：{quiz.question || quiz.title}
+              </Paragraph>
+              {quiz.options && (
+                <div style={{ margin: '8px 0' }}>
+                  {Object.entries(quiz.options).map(([key, value]) => (
+                    <div key={key} style={{ margin: '4px 0' }}>
+                      {key}. {value}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {quiz.answer && (
+                <Text type="success">
+                  答案：{quiz.answer}
+                </Text>
+              )}
+            </div>
+          </List.Item>
+        )}
+      />
+    );
+  };
+
+  if (loading) {
+    return <div style={{ padding: 20 }}>加载中...</div>;
+  }
 
   return (
-    <div style={{ padding: '20px' }}>
-      <Card>
-        <Title level={2}>文档笔记</Title>
-        <Divider />
-        
-        <Title level={4}>摘要</Title>
-        <Paragraph>{note.summary}</Paragraph>
-        
-        <Title level={4}>标签</Title>
-        {note.tags.map((tag, index) => (
-          <Tag key={index} color="blue">{tag}</Tag>
-        ))}
-        
-        <Divider />
-        <Title level={4}>思维导图</Title>
-        <div style={{ 
-          border: '1px solid #e8e8e8', 
-          padding: '10px', 
-          borderRadius: '4px',
-          backgroundColor: '#fafafa'
-        }}>
-          <ReactMarkdown>{note.mind_map_content}</ReactMarkdown>
-        </div>
-        
-        <Divider />
-        <Title level={4}>智能问题</Title>
-        <List
-          dataSource={note.questions}
-          renderItem={(question) => (
-            <List.Item>
-              <div>
-                <Typography.Paragraph strong>{question.question}</Typography.Paragraph>
-                <div>选项：{JSON.parse(question.options).join(' | ')}</div>
-                <div>答案：{question.answer}</div>
-                <div>解析：{question.explanation}</div>
-              </div>
-            </List.Item>
-          )}
-        />
+    <div style={{ padding: 20 }}>
+      <Title level={2}>{noteData.filename}</Title>
+      
+      {/* 笔记摘要 */}
+      <Card title="笔记摘要" style={{ marginBottom: 20 }}>
+        <Paragraph>{noteData.summary}</Paragraph>
       </Card>
+
+      {/* 思维导图 */}
+      <Card title="思维导图" style={{ marginBottom: 20 }}>
+        <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+          {noteData.mindMap}
+        </ReactMarkdown>
+      </Card>
+
+      {/* AI提取题目（新增） */}
+      <Card 
+        title={`AI提取题目（共${noteData.quizzes.length}道）`} 
+        style={{ marginBottom: 20 }}
+        extra={
+          quizzesSaved ? (
+            <Tag color="green">已存入数据库</Tag>
+          ) : (
+            <Button 
+              type="primary" 
+              size="small"
+              onClick={handleSaveQuizzes}
+            >
+              存入数据库
+            </Button>
+          )
+        }
+      >
+        {renderQuizzes()}
+      </Card>
+
+      {/* AI问答 */}
+      <Divider title="AI问答" titlePlacement="left" />
+      <div style={{ marginBottom: 20 }}>
+        <TextArea
+          placeholder="输入你想咨询的问题..."
+          value={userQuestion}
+          onChange={(e) => setUserQuestion(e.target.value)}
+          rows={4}
+          style={{ marginBottom: 10 }}
+        />
+        <Button 
+          type="primary" 
+          onClick={handleSendQuestion}
+          disabled={!userQuestion.trim()}
+        >
+          发送
+        </Button>
+      </div>
+      
+      {/* 聊天记录 */}
+      <List
+        dataSource={chatHistory}
+        renderItem={(item) => (
+          <List.Item
+            style={{ 
+              background: item.role === 'user' ? '#f0f8ff' : '#fff',
+              padding: 10,
+              marginBottom: 5,
+              borderRadius: 4
+            }}
+          >
+            <Text strong>{item.role === 'user' ? '我：' : 'AI：'}</Text>
+            <Text>{item.content}</Text>
+          </List.Item>
+        )}
+      />
     </div>
   );
 };

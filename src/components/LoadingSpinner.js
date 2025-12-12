@@ -1,5 +1,8 @@
 import React from 'react';
 import { ClipLoader } from 'react-spinners';
+import { Typography } from 'antd'; // 从Typography中导入Text
+
+const { Text } = Typography;
 
 const LoadingSpinner = ({ loading }) => {
   return (
