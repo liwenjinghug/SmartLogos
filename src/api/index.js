@@ -1,30 +1,30 @@
 import axios from 'axios';
 
-const trimSlash = (s) => String(s || '').replace(/\/+$/, '');
+const trimSlash = (s) => String(s || '').trim().replace(/\/+$/, '');
 
 const isHttps =
   typeof window !== 'undefined' &&
   window.location &&
   window.location.protocol === 'https:';
 
-// 数据服务：本地默认直连；部署到 https（如 Vercel）时自动走同源代理（/api）避免 Mixed Content/CORS
+// 数据服务：本地默认直连；部署到 https（如 Vercel）时优先走同源代理（/api）避免 Mixed Content/CORS
 const API_BASE_URL = (() => {
   const env = trimSlash(process.env.REACT_APP_API_BASE_URL);
-  if (env) {
-    if (isHttps && env.startsWith('http://')) return '';
-    return env;
+  if (isHttps) {
+    // https 页面下，只有当 env 本身是 https 才允许直连；否则一律走同源 /api
+    return env && env.startsWith('https://') ? env : '';
   }
-  return isHttps ? '' : 'http://47.108.189.246:8006';
+  return env || 'http://47.108.189.246:8006';
 })();
 
-// AI 服务：同理，https 下自动走同源代理（/ai）
+// AI 服务：同理，https 下优先走同源代理（/ai）
 const AI_API_BASE_URL = (() => {
   const env = trimSlash(process.env.REACT_APP_AI_BASE_URL);
-  if (env) {
-    if (isHttps && env.startsWith('http://')) return '/ai';
-    return env;
+  if (isHttps) {
+    // https 页面下，只有当 env 本身是 https 才允许直连；否则一律走同源 /ai
+    return env && env.startsWith('https://') ? env : '/ai';
   }
-  return isHttps ? '/ai' : 'http://47.108.189.246:8005';
+  return env || 'http://47.108.189.246:8005';
 })();
 
 // ========== 辅助函数：处理统一返回格式 ==========
