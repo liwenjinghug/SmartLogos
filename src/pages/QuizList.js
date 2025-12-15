@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Card, List, Typography, Input, Button, Select, message, Spin } from 'antd';
 import { getQuizzesFromDB, getUserDocuments } from '../api/index';
+import { useAuth } from '../contexts/AuthContext';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
+
+const getDocId = (doc) => doc?.id ?? doc?.document_id ?? doc?.documentId;
+const getDocName = (doc) => doc?.filename ?? doc?.fileName ?? '未命名';
 
 const QuizList = () => {
   const [loading, setLoading] = useState(true);
@@ -11,19 +15,21 @@ const QuizList = () => {
   const [documents, setDocuments] = useState([]);
   const [selectedNoteId, setSelectedNoteId] = useState('');
   const [searchKeyword, setSearchKeyword] = useState('');
+  const { user } = useAuth();
 
   // 加载笔记列表（用于筛选）
   useEffect(() => {
     const fetchDocuments = async () => {
       try {
-        const res = await getUserDocuments(1);
-        setDocuments(res.data || []);
+        if (!user?.id) return;
+        const res = await getUserDocuments(user.id);
+        setDocuments(Array.isArray(res) ? res : []);
       } catch (err) {
         message.error('加载笔记列表失败：' + err.message);
       }
     };
     fetchDocuments();
-  }, []);
+  }, [user?.id]);
 
   // 加载题目列表（支持筛选）
   useEffect(() => {
@@ -31,8 +37,8 @@ const QuizList = () => {
       try {
         setLoading(true);
         const params = selectedNoteId ? { note_id: selectedNoteId } : {};
-        const res = await getQuizzesFromDB(params);
-        let quizzes = res.data || [];
+        const data = await getQuizzesFromDB(params);
+        let quizzes = Array.isArray(data) ? data : [];
         
         // 关键词过滤
         if (searchKeyword) {
@@ -51,7 +57,7 @@ const QuizList = () => {
     };
 
     fetchQuizzes();
-  }, [selectedNoteId, searchKeyword]);
+  }, [selectedNoteId, searchKeyword, user?.id]);
 
   // 渲染题目列表
   const renderQuizzes = () => {
@@ -75,7 +81,11 @@ const QuizList = () => {
               
               {/* 所属笔记 */}
               <Text type="secondary" style={{ marginBottom: 8, display: 'block' }}>
-                所属笔记：{documents.find(doc => doc.id === quiz.note_id)?.filename || '未知'}
+                所属笔记：{(() => {
+                  const quizDocId = quiz.document_id ?? quiz.note_id ?? quiz.id;
+                  const doc = documents.find((d) => String(getDocId(d)) === String(quizDocId));
+                  return doc ? getDocName(doc) : '未知';
+                })()}
               </Text>
 
               {/* 选项 */}
@@ -103,7 +113,7 @@ const QuizList = () => {
   };
 
   return (
-    <div style={{ padding: 20 }}>
+    <div className="page-decor page-decor--quiz" style={{ padding: 20 }}>
       <Title level={2}>已存储题目查询</Title>
       
       {/* 筛选区域 */}
@@ -119,8 +129,8 @@ const QuizList = () => {
             >
               <Option value="">全部笔记</Option>
               {documents.map(doc => (
-                <Option key={doc.id} value={doc.id}>
-                  {doc.filename}
+                <Option key={String(getDocId(doc))} value={String(getDocId(doc))}>
+                  {getDocName(doc)}
                 </Option>
               ))}
             </Select>

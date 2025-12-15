@@ -1,3 +1,74 @@
+# smartlogos-frontend
+
+## AI 服务对接（解析+生成+问答）
+
+本项目前端会调用两个后端：
+
+- **AI 服务**（文件解析/摘要/思维导图/题目/问答）：默认 `http://47.108.189.246:8005`
+  - `POST /api/analyze`（multipart/form-data，字段 `file`，query 可选 `target_lang=zh|en`）
+  - `POST /api/chat`（JSON：`{ question, context }`，其中 `context` 必须是当前笔记文本或 Note ID 等可定位信息）
+- **数据服务**（文档列表/笔记详情/题库入库等）：`http://47.108.189.246:8006`
+  - `GET /api/documents?user_id={userId}` - 获取文档列表
+  - `GET /api/documents/{id}` - 获取笔记详情
+  - `POST /api/notes?document_id={id}` - 保存AI分析结果
+  - `GET /api/quizzes` - 获取题目列表
+  - 统一返回格式：`{ code: 200, msg: "success", data: ... }`
+
+### 环境变量
+
+在项目根目录新建 `.env`（或使用系统环境变量）示例：
+
+```
+REACT_APP_AI_BASE_URL=http://47.108.189.246:8005
+REACT_APP_API_BASE_URL=http://47.108.189.246:8006
+```
+
+说明：
+- `REACT_APP_AI_BASE_URL` 只用于 AI 的 `/api/analyze`、`/api/chat`。
+- `REACT_APP_API_BASE_URL` 仍用于文档/笔记/题库等“入库与查询”接口（MemberA）。
+
+## 本地运行与调试
+
+1. 安装依赖：
+  - `npm install`
+2. 启动：
+  - `npm start`
+3. 打开：
+  - `http://localhost:3000`
+
+调试建议：
+- 上传文件后，AI 分析通常约 10 秒，页面会显示加载动画。
+- 如果出现跨域问题，需要由后端开启 CORS（允许 `http://localhost:3000`）。
+
+## 与后端数据库同学（MemberA）对接建议
+
+AI 服务返回结构（来自 `/api/analyze`）：
+- `summary`：文本摘要
+- `mind_map_md`：Markdown 思维导图源码
+- `tags`：字符串数组
+- `quizzes`：数组，每项包含 `question`、`options`（数组）、`answer`、`explanation`
+- `lang`：建议由前端在入库时额外保存（来自用户选择的 `target_lang`）
+
+建议数据库表：
+
+1) `Notes`（笔记主表）
+- `summary` (Text)
+- `mind_map_content` (Text/LongText) 存 `mind_map_md`
+- `tags` (JSON/Array)
+- `lang` (Varchar)
+
+2) `Questions`（题目表，Notes 一对多）
+- `note_id` (FK)
+- `question` (Text)
+- `options` (JSON String / JSON Column) — 建议直接存数组
+- `answer` (Varchar/Text)
+- `explanation` (Text)
+
+前端侧的落库推荐接口形态（供 MemberA 实现）：
+- `POST /notes`：入参 `{ filename, summary, mind_map_md, tags, lang }`，返回 `{ note_id }`
+- `POST /notes/:note_id/questions`：入参 `{ quizzes: [...] }` 或逐条插入
+
+当前项目里已有一个示例接口 `saveQuizzesToDB(noteId, quizzes)`（仅存题目），如 MemberA 也需要存笔记主表信息，建议新增 `saveNoteToDB(...)` 接口并返回 `note_id`。
 智学链 (SmartLogos) 前端项目说明
 项目介绍
 智学链是一个基于 React + Ant Design 的 AI 知识聚合系统前端，主要功能包括：

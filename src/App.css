@@ -1,38 +1,313 @@
-.App {
+.layout {
+  background: radial-gradient(circle at 20% 20%, #f2f6ff, #f9fbff 45%, #eef2ff 80%);
+  min-height: 100vh;
+}
+
+.app-header {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #e6e9f5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+}
+
+.logo {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f4bff;
+  text-decoration: none;
+}
+
+.nav-link {
+  color: #2f3542;
+  text-decoration: none;
+}
+
+.nav-link.primary {
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: linear-gradient(120deg, #1f4bff, #6a7bff);
+  color: #fff;
+}
+
+.nav-link:hover {
+  color: #1f4bff;
+}
+
+.nav-user {
+  color: #1f2a44;
+  font-weight: 600;
+}
+
+.app-content {
+  padding: 32px 48px 48px;
+}
+
+.app-shell {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 14px 40px rgba(18, 38, 63, 0.08);
+  min-height: 360px;
+  padding: 24px;
+}
+
+/* --------- Ant Design 细节美化 --------- */
+.ant-card {
+  border-radius: 14px;
+  border: 1px solid #ebeff8;
+  box-shadow: 0 10px 30px rgba(31, 75, 255, 0.05);
+  transition: all 0.2s ease;
+}
+
+.ant-card-hoverable:hover {
+  box-shadow: 0 18px 40px rgba(31, 75, 255, 0.12);
+  transform: translateY(-2px);
+}
+
+.ant-btn-primary {
+  border-radius: 10px;
+  background: linear-gradient(120deg, #1f4bff, #6a7bff);
+  box-shadow: 0 8px 18px rgba(31, 75, 255, 0.25);
+}
+
+.ant-btn {
+  border-radius: 10px;
+}
+
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-select-selector,
+.ant-input-password {
+  border-radius: 10px !important;
+  border-color: #e1e7f5 !important;
+}
+
+.ant-input:focus,
+.ant-select-focused .ant-select-selector,
+.ant-input-affix-wrapper-focused {
+  box-shadow: 0 0 0 2px rgba(31, 75, 255, 0.15) !important;
+  border-color: #1f4bff !important;
+}
+
+.ant-divider-horizontal {
+  border-top-color: #eef2ff;
+}
+
+.ant-empty-description {
+  color: #6b7280;
+}
+
+.ant-list-item {
+  border-radius: 12px;
+}
+
+.ant-progress-bg {
+  border-radius: 999px !important;
+}
+
+.ant-tag {
+  border-radius: 10px;
+  padding: 4px 10px;
+}
+
+/* 卡片标题和副标题色调 */
+.ant-card-head-title {
+  font-weight: 700;
+  color: #1f2a44;
+}
+
+.ant-typography-secondary {
+  color: #6b7280 !important;
+}
+
+.app-footer {
+  text-align: center;
+  color: #6b7280;
+}
+
+.auth-page {
+  min-height: 70vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #e8edff 0%, #f8fbff 50%, #f1f5ff 100%);
+  padding: 40px 0;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.auth-page::before,
+.auth-page::after {
+  content: "";
+  position: absolute;
+  width: 760px;
+  height: 760px;
+  background-repeat: no-repeat;
+  background-size: contain;
+  opacity: 0.10;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.auth-page::before {
+  top: -260px;
+  left: -260px;
+  background-image: url("./assets/decor/butterfly-pattern.svg");
+}
+
+.auth-page::after {
+  bottom: -280px;
+  right: -280px;
+  background-image: url("./assets/decor/butterfly-flower.svg");
+  opacity: 0.08;
+}
+.auth-card {
+  width: 420px;
+  box-shadow: 0 20px 60px rgba(31, 75, 255, 0.12);
+  border-radius: 18px;
+  position: relative;
+  z-index: 1;
+}
+
+.auth-header {
+  margin-bottom: 16px;
+}
+
+.auth-footer {
+  margin-top: 16px;
   text-align: center;
 }
 
-.App-logo {
-  height: 40vmin;
+/* 笔记页磨砂背景容器 */
+.note-page {
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(230, 233, 245, 0.9);
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.note-page::before {
+  content: "";
+  position: absolute;
+  top: -240px;
+  right: -240px;
+  width: 700px;
+  height: 700px;
+  background-image: url("./assets/decor/butterfly-pattern.svg");
+  background-repeat: no-repeat;
+  background-size: contain;
+  opacity: 0.06;
   pointer-events: none;
+  z-index: 0;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.note-page > * {
+  position: relative;
+  z-index: 1;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+/* 通用页面装饰（首页/上传/题目查询等） */
+.page-decor {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background-image: url("./assets/decor/butterfly-flower.svg"), url("./assets/decor/butterfly-pattern.svg");
+  background-repeat: no-repeat;
+  background-size: 92px 92px, 72px 72px;
+  background-position: 18px 18px, calc(100% - 90px) calc(100% - 82px);
+}
+
+.page-decor::before,
+.page-decor::after {
+  content: "";
+  position: absolute;
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.page-decor::before {
+  top: -260px;
+  left: -260px;
+  width: 740px;
+  height: 740px;
+  background-image: url("./assets/decor/butterfly-pattern.svg");
+  opacity: 0.06;
+}
+
+.page-decor::after {
+  bottom: -280px;
+  right: -280px;
+  width: 760px;
+  height: 760px;
+  background-image: url("./assets/decor/butterfly-flower.svg");
+  opacity: 0.05;
+}
+
+.page-decor > * {
+  position: relative;
+  z-index: 1;
+}
+/* 上传区域排版 */
+.upload-toolbar {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  gap: 10px;
   align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
 }
 
-.App-link {
-  color: #61dafb;
+.upload-hint {
+  margin-top: 8px;
+  color: #6b7280;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* 选择题状态 */
+.quiz-option-btn {
+  text-align: left;
+}
+
+.quiz-option-correct {
+  border-color: #52c41a !important;
+  box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.12) !important;
+}
+
+.quiz-option-wrong {
+  border-color: #ff4d4f !important;
+  box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.10) !important;
+}
+
+.quiz-explain {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f7f9ff;
+  border: 1px solid #e8edff;
+  border-radius: 12px;
+}
+
+/* 右下角悬浮聊天窗 */
+.chat-float-panel {
+  position: fixed;
+  right: 24px;
+  bottom: 84px;
+  width: 420px;
+  z-index: 999;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 18px 55px rgba(18, 38, 63, 0.18);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(230, 233, 245, 0.9);
+}
+
+.chat-float-history {
+  max-height: 340px;
+  overflow: auto;
 }

@@ -1,13 +1,80 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Typography, Tag, Divider, List, Button, message } from 'antd';
+import React, { useMemo, useState, useEffect } from 'react';
+import { Card, Typography, Tag, List, Button, message, Space } from 'antd';
+import { useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
-import { getNoteDetail, chatWithNote, saveQuizzesToDB } from '../api/index';
+import LoadingSpinner from '../components/LoadingSpinner';
+import ChatFloat from '../components/ChatFloat';
+import { getNoteDetail, saveQuizzesToDB } from '../api/index';
 
-const { Title, Text, Paragraph, TextArea } = Typography;
+const { Title, Text, Paragraph } = Typography;
 
-const NoteDetail = ({ match }) => {
-  const noteId = match.params.id;
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const normalize = (s) => String(s ?? '').trim().toLowerCase();
+
+const toMarkdownMindMap = (value) => {
+  if (value == null) return '';
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return '';
+    // 如果后端把 JSON 当字符串存了，这里尽量解析成 Markdown
+    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        return toMarkdownMindMap(parsed);
+      } catch {
+        return trimmed;
+      }
+    }
+    return trimmed;
+  }
+
+  const pickText = (node) => {
+    if (node == null) return '';
+    if (typeof node === 'string' || typeof node === 'number') return String(node);
+    if (typeof node !== 'object') return '';
+    return (
+      node.topic ??
+      node.title ??
+      node.name ??
+      node.text ??
+      node.label ??
+      node.value ??
+      ''
+    );
+  };
+
+  const pickChildren = (node) => {
+    if (!node || typeof node !== 'object') return [];
+    const children = node.children ?? node.nodes ?? node.items ?? node.subtopics ?? node.subNodes;
+    return Array.isArray(children) ? children : [];
+  };
+
+  const lines = [];
+  const walk = (node, depth) => {
+    const text = pickText(node);
+    if (text) {
+      lines.push(`${'  '.repeat(depth)}- ${text}`);
+    }
+    for (const child of pickChildren(node)) {
+      walk(child, Math.min(depth + 1, 10));
+    }
+  };
+
+  if (Array.isArray(value)) {
+    for (const node of value) walk(node, 0);
+  } else if (typeof value === 'object') {
+    // 常见结构：{root:{...}} / {data:{...}}
+    const root = value.root ?? value.data ?? value.tree ?? value;
+    walk(root, 0);
+  }
+
+  return lines.join('\n');
+};
+
+const NoteDetail = () => {
+  const { id: noteId } = useParams();
   const [noteData, setNoteData] = useState({
     filename: '',
     summary: '',
@@ -16,21 +83,30 @@ const NoteDetail = ({ match }) => {
     tags: []
   });
   const [loading, setLoading] = useState(true);
-  const [chatHistory, setChatHistory] = useState([]);
-  const [userQuestion, setUserQuestion] = useState('');
   const [quizzesSaved, setQuizzesSaved] = useState(false); // 题目是否已存储
+  const [selectedMap, setSelectedMap] = useState({});
+  const [showExplainMap, setShowExplainMap] = useState({});
 
   // 获取笔记详情 + 自动存储题目
   useEffect(() => {
     const fetchNoteData = async () => {
       try {
         setLoading(true);
-        const res = await getNoteDetail(noteId);
-        const { filename, summary, mind_map, quizzes, tags } = res.data;
+        setSelectedMap({});
+        setShowExplainMap({});
+        const data = await getNoteDetail(noteId);
+        const { filename, summary, mind_map, mind_map_md, quizzes, tags } = data;
+        const mindMapRaw =
+          mind_map_md ??
+          data.mindMapMd ??
+          data.mind_map_markdown ??
+          data.mindMapMarkdown ??
+          mind_map ??
+          data.mindMap;
         const noteInfo = {
           filename: filename || '',
           summary: summary || '',
-          mindMap: mind_map || '',
+          mindMap: toMarkdownMindMap(mindMapRaw),
           quizzes: quizzes || [],
           tags: tags || []
         };
@@ -54,25 +130,6 @@ const NoteDetail = ({ match }) => {
     }
   }, [noteId, quizzesSaved]);
 
-  // Chat with Note 逻辑
-  const handleSendQuestion = async () => {
-    if (!userQuestion.trim() || !noteData.summary) {
-      message.warning('请输入有效问题');
-      return;
-    }
-    try {
-      const res = await chatWithNote(userQuestion.trim(), noteData.summary);
-      setChatHistory([
-        ...chatHistory,
-        { role: 'user', content: userQuestion.trim() },
-        { role: 'ai', content: res.data.answer || '暂无回答' }
-      ]);
-      setUserQuestion('');
-    } catch (err) {
-      message.error('聊天请求失败：' + err.message);
-    }
-  };
-
   // 手动存储题目（备用）
   const handleSaveQuizzes = async () => {
     if (noteData.quizzes.length === 0) {
@@ -88,47 +145,110 @@ const NoteDetail = ({ match }) => {
     }
   };
 
+  const contextForChat = useMemo(() => {
+    if (!noteData) return '';
+    const parts = [
+      noteData.filename ? `文件名：${noteData.filename}` : '',
+      noteData.summary ? `摘要：\n${noteData.summary}` : '',
+      noteData.mindMap ? `思维导图（Markdown）：\n${noteData.mindMap}` : '',
+    ].filter(Boolean);
+    return parts.join('\n\n');
+  }, [noteData]);
+
+  const quizItems = useMemo(() => (Array.isArray(noteData?.quizzes) ? noteData.quizzes : []), [noteData]);
+
+  const onSelectOption = (quizIndex, optionIndex) => {
+    setSelectedMap((prev) => ({ ...prev, [quizIndex]: optionIndex }));
+  };
+
+  const toggleExplain = (quizIndex) => {
+    setShowExplainMap((prev) => ({ ...prev, [quizIndex]: !prev[quizIndex] }));
+  };
+
+  const isCorrect = (quiz, optionIndex) => {
+    const answer = quiz?.answer;
+    const options = Array.isArray(quiz?.options) ? quiz.options : [];
+    const selectedLetter = LETTERS[optionIndex] || '';
+    const selectedText = options[optionIndex] || '';
+    return normalize(answer) === normalize(selectedLetter) || normalize(answer) === normalize(selectedText);
+  };
+
   // 渲染题目列表
   const renderQuizzes = () => {
-    if (!noteData.quizzes || noteData.quizzes.length === 0) {
+    if (!quizItems || quizItems.length === 0) {
       return <Text>暂无题目</Text>;
     }
     return (
       <List
-        dataSource={noteData.quizzes}
-        renderItem={(quiz, index) => (
-          <List.Item key={index} style={{ margin: '10px 0', padding: '10px', border: '1px solid #e8e8e8', borderRadius: '4px' }}>
-            <div>
-              <Paragraph strong>
-                第{index + 1}题：{quiz.question || quiz.title}
-              </Paragraph>
-              {quiz.options && (
-                <div style={{ margin: '8px 0' }}>
-                  {Object.entries(quiz.options).map(([key, value]) => (
-                    <div key={key} style={{ margin: '4px 0' }}>
-                      {key}. {value}
-                    </div>
-                  ))}
-                </div>
-              )}
-              {quiz.answer && (
-                <Text type="success">
-                  答案：{quiz.answer}
-                </Text>
-              )}
-            </div>
-          </List.Item>
-        )}
+        dataSource={quizItems}
+        renderItem={(quiz, index) => {
+          const options = Array.isArray(quiz?.options) ? quiz.options : [];
+          const selected = selectedMap[index];
+          const selectedDone = typeof selected === 'number';
+          const showExplain = !!showExplainMap[index];
+          return (
+            <List.Item key={index} style={{ padding: 0, border: 'none' }}>
+              <Card style={{ width: '100%' }} type="inner" title={`第 ${index + 1} 题`}>
+                <Paragraph strong style={{ marginBottom: 8 }}>{quiz?.question || quiz?.title}</Paragraph>
+
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  {options.map((opt, oi) => {
+                    const picked = selected === oi;
+                    const correct = selectedDone && isCorrect(quiz, oi);
+                    const wrong = selectedDone && picked && !isCorrect(quiz, oi);
+                    const shouldHighlightCorrect = selectedDone && isCorrect(quiz, oi);
+                    return (
+                      <Button
+                        key={oi}
+                        block
+                        onClick={() => onSelectOption(index, oi)}
+                        disabled={selectedDone}
+                        type={picked ? 'primary' : 'default'}
+                        danger={wrong}
+                        className={
+                          'quiz-option-btn ' +
+                          (wrong ? 'quiz-option-wrong ' : '') +
+                          (shouldHighlightCorrect ? 'quiz-option-correct' : '')
+                        }
+                      >
+                        {LETTERS[oi]}. {opt}
+                        {correct ? '（正确）' : ''}
+                        {wrong ? '（错误）' : ''}
+                      </Button>
+                    );
+                  })}
+                </Space>
+
+                {selectedDone && (
+                  <div style={{ marginTop: 12 }}>
+                    <Space>
+                      <Text strong>正确答案：</Text>
+                      <Text type="success">{quiz?.answer}</Text>
+                      <Button size="small" onClick={() => toggleExplain(index)}>
+                        {showExplain ? '收起解析' : '查看解析'}
+                      </Button>
+                    </Space>
+
+                    {showExplain && (
+                      <div className="quiz-explain">
+                        <Text strong>解析：</Text>
+                        <div style={{ whiteSpace: 'pre-wrap', marginTop: 6 }}>{quiz?.explanation || quiz?.analysis}</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Card>
+            </List.Item>
+          );
+        }}
       />
     );
   };
 
-  if (loading) {
-    return <div style={{ padding: 20 }}>加载中...</div>;
-  }
+  if (loading) return <LoadingSpinner loading={loading} />;
 
   return (
-    <div style={{ padding: 20 }}>
+    <div className="note-page">
       <Title level={2}>{noteData.filename}</Title>
       
       {/* 笔记摘要 */}
@@ -138,14 +258,18 @@ const NoteDetail = ({ match }) => {
 
       {/* 思维导图 */}
       <Card title="思维导图" style={{ marginBottom: 20 }}>
-        <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
-          {noteData.mindMap}
-        </ReactMarkdown>
+        {noteData.mindMap ? (
+          <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+            {noteData.mindMap}
+          </ReactMarkdown>
+        ) : (
+          <Text type="secondary">暂无思维导图数据</Text>
+        )}
       </Card>
 
       {/* AI提取题目（新增） */}
       <Card 
-        title={`AI提取题目（共${noteData.quizzes.length}道）`} 
+        title={`AI提取题目（共${quizItems.length}道）`} 
         style={{ marginBottom: 20 }}
         extra={
           quizzesSaved ? (
@@ -164,42 +288,8 @@ const NoteDetail = ({ match }) => {
         {renderQuizzes()}
       </Card>
 
-      {/* AI问答 */}
-      <Divider title="AI问答" titlePlacement="left" />
-      <div style={{ marginBottom: 20 }}>
-        <TextArea
-          placeholder="输入你想咨询的问题..."
-          value={userQuestion}
-          onChange={(e) => setUserQuestion(e.target.value)}
-          rows={4}
-          style={{ marginBottom: 10 }}
-        />
-        <Button 
-          type="primary" 
-          onClick={handleSendQuestion}
-          disabled={!userQuestion.trim()}
-        >
-          发送
-        </Button>
-      </div>
-      
-      {/* 聊天记录 */}
-      <List
-        dataSource={chatHistory}
-        renderItem={(item) => (
-          <List.Item
-            style={{ 
-              background: item.role === 'user' ? '#f0f8ff' : '#fff',
-              padding: 10,
-              marginBottom: 5,
-              borderRadius: 4
-            }}
-          >
-            <Text strong>{item.role === 'user' ? '我：' : 'AI：'}</Text>
-            <Text>{item.content}</Text>
-          </List.Item>
-        )}
-      />
+      {/* 悬浮问答窗：调用 /api/chat，并携带当前笔记上下文 */}
+      <ChatFloat context={contextForChat} title="智能问答" />
     </div>
   );
 };
