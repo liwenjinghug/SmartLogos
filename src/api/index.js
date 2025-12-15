@@ -1,10 +1,31 @@
 import axios from 'axios';
 
-// Member A（文档/笔记/题库等）数据服务：默认 47.108.189.246:8006
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://47.108.189.246:8006';
+const trimSlash = (s) => String(s || '').replace(/\/+$/, '');
 
-// AI 服务（解析+生成+问答）：所有接口在 47.108.189.246:8005
-const AI_API_BASE_URL = process.env.REACT_APP_AI_BASE_URL || 'http://47.108.189.246:8005';
+const isHttps =
+  typeof window !== 'undefined' &&
+  window.location &&
+  window.location.protocol === 'https:';
+
+// 数据服务：本地默认直连；部署到 https（如 Vercel）时自动走同源代理（/api）避免 Mixed Content/CORS
+const API_BASE_URL = (() => {
+  const env = trimSlash(process.env.REACT_APP_API_BASE_URL);
+  if (env) {
+    if (isHttps && env.startsWith('http://')) return '';
+    return env;
+  }
+  return isHttps ? '' : 'http://47.108.189.246:8006';
+})();
+
+// AI 服务：同理，https 下自动走同源代理（/ai）
+const AI_API_BASE_URL = (() => {
+  const env = trimSlash(process.env.REACT_APP_AI_BASE_URL);
+  if (env) {
+    if (isHttps && env.startsWith('http://')) return '/ai';
+    return env;
+  }
+  return isHttps ? '/ai' : 'http://47.108.189.246:8005';
+})();
 
 // ========== 辅助函数：处理统一返回格式 ==========
 const handleResponse = (response) => {
