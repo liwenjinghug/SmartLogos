@@ -18,6 +18,7 @@ Navicat Premium 17.0.4
 Java版本: 17
 🗄️ 数据库设计
 数据库表结构
+
 1. users - 用户表
 CREATE TABLE users (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '用户ID，主键',
@@ -92,9 +93,10 @@ public class SecurityConfig {
 }
 📡 API接口文档
 基础信息
-基础URL: http://localhost:8080/api
+基础URL: http://47.108.189.246:8006/api
 认证: API接口无需认证，管理页面需要登录
 格式: JSON
+
 1. 文档管理接口
 1.1 上传文件
 http
@@ -103,7 +105,7 @@ Content-Type: multipart/form-data
 参数:
 - file: 文件 (必填)
 - userId: 用户ID (必填)
-响应示例:
+  响应示例:
     json
     {
       "success": true,
@@ -111,10 +113,10 @@ Content-Type: multipart/form-data
       "documentId": 1,
       "fileName": "test.pdf"
     }
-1.2 获取用户文档列表
+  1.2 获取用户文档列表
   http
   GET /documents/user/{userId}
-响应示例:
+  响应示例:
     json
     [
       {
@@ -127,10 +129,10 @@ Content-Type: multipart/form-data
         "status": "COMPLETED"
       }
     ]
-1.3 获取文档问题
+  1.3 获取文档问题
   http
   GET /documents/{documentId}/questions?userId={userId}
-响应示例:
+  响应示例:
     json
     [
       {
@@ -161,11 +163,14 @@ Content-Type: multipart/form-data
 应用配置 (application.properties)
 properties
 # 服务器配置
-server.port=8080
+ai_server.port=8005
+
+mysql_server.port=8006
+
 # 数据库配置
 spring.datasource.url=jdbc:mysql://localhost:3306/smartlogos?useSSL=false&serverTimezone=UTC
 spring.datasource.username=root
-spring.datasource.password=******
+spring.datasource.password=whz123456
 
 # JPA配置
 spring.jpa.hibernate.ddl-auto=update
@@ -207,10 +212,6 @@ CREATE DATABASE smartlogos;
 
 运行应用:java -jar target/note-1.0.0.jar
 
-访问应用
-API接口: http://localhost:8080/api
-管理页面: http://localhost:8080/
-
 🔧 开发指南
 实体类设计要点
 使用JPA注解进行ORM映射
@@ -235,27 +236,3 @@ INSERT INTO users (username, email, password, create_time) VALUES
 测试登录信息
 用户名: 张三
 密码: password123
-
-🐛 故障排除
-常见问题
-数据库连接失败
-检查MySQL服务是否启动
-验证数据库连接配置
-文件上传失败
-检查上传目录权限
-验证文件大小限制配置
-JSON序列化错误
-检查实体类循环引用
-添加@JsonIgnore注解
-AI处理失败
-检查AI服务接口连通性
-查看应用日志错误信息
-日志查看
-应用日志输出到控制台，包含详细的处理过程和错误信息。
-📝 版本历史
-v1.0.0 (2025-11-27)
-✅ 基础文件上传功能
-✅ AI智能处理集成
-✅ 用户认证系统
-✅ 完整的RESTful API
-✅ 数据库设计和优化
