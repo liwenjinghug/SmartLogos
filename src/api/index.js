@@ -1,5 +1,9 @@
 import axios from 'axios';
 
+// 统一标记为 XHR + JSON，避免部分后端在未授权时返回 302 跳转到 /login（HTML）导致 CORS/解析失败
+axios.defaults.headers.common.Accept = 'application/json';
+axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+
 const trimSlash = (s) => String(s || '').trim().replace(/\/+$/, '');
 
 const isHttps =
@@ -7,9 +11,21 @@ const isHttps =
   window.location &&
   window.location.protocol === 'https:';
 
+const isLocalhostHost =
+  typeof window !== 'undefined' &&
+  window.location &&
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+// 现场演示（局域网 IP 访问）时避免 CORS：优先走同源反代（/api, /ai）
+const shouldUseSameOriginProxy =
+  typeof window !== 'undefined' &&
+  window.location &&
+  !isLocalhostHost;
+
 // 数据服务：本地默认直连；部署到 https（如 Vercel）时优先走同源代理（/api）避免 Mixed Content/CORS
 const API_BASE_URL = (() => {
   const env = trimSlash(process.env.REACT_APP_API_BASE_URL);
+  if (shouldUseSameOriginProxy) return '';
   if (isHttps) {
     // https 页面下，只有当 env 本身是 https 才允许直连；否则一律走同源 /api
     return env && env.startsWith('https://') ? env : '';
@@ -20,6 +36,7 @@ const API_BASE_URL = (() => {
 // AI 服务：同理，https 下优先走同源代理（/ai）
 const AI_API_BASE_URL = (() => {
   const env = trimSlash(process.env.REACT_APP_AI_BASE_URL);
+  if (shouldUseSameOriginProxy) return '/ai';
   if (isHttps) {
     // https 页面下，只有当 env 本身是 https 才允许直连；否则一律走同源 /ai
     return env && env.startsWith('https://') ? env : '/ai';
