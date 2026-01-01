@@ -26,6 +26,10 @@ public class Question {
     @Column(columnDefinition = "TEXT")
     private String options;
 
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String explanation;  // 题目解析
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "note_id")
     private Note note;

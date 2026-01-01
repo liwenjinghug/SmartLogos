@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # MySQL 数据库
+  mysql:
+    image: mysql:8.0
+    container_name: smartlogos-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: whz123456
+      MYSQL_DATABASE: smartlogos
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+    ports:
+      - "3310:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./sql/smartlogos.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - smartlogos-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Spring Boot 后端应用
+  backend:
+    image: crpi-8wr8pty3odc286ne.cn-chengdu.personal.cr.aliyuncs.com/glycomind/smartlogos-backend:v1
+    container_name: smartlogos-backend
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/smartlogos?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: whz123456
+      SPRING_PROFILES_ACTIVE: prod
+    ports:
+      - "8006:8080"
+    volumes:
+      - ./uploads:/app/uploads
+    networks:
+      - smartlogos-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/documents?user_id=1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  mysql-data:
+    driver: local
+
+networks:
+  smartlogos-network:
+    driver: bridge

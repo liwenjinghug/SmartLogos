@@ -24,6 +24,10 @@ public class Note {
     @Column(columnDefinition = "TEXT")
     private String mindMapJson;
 
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String mindMapContent;  // Markdown 格式的思维导图
+
     private String tags;
 
     private LocalDateTime processTime;
